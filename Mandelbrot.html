@@ -1,0 +1,82 @@
+<!DOCTYPE HTML>
+<HTML>
+<HEAD>
+<TITLE>Mandelbrot explorer</TITLE>
+</HEAD>
+<BODY>
+<SCRIPT>
+var zoomLevel = 0;
+var animateTimer;
+function calculateMandelbrotPoint(x,y) {
+	i = 0.0;
+	maxi = 256;
+	ix = x;
+	iy = y;
+	while (ix*ix + iy*iy < 4 && i < maxi) {
+		temp = ix*ix - iy*iy + x;
+		iy = (2 * ix * iy) + y;
+		ix = temp;
+		i+=1.0;
+	}
+	i = Math.floor(i*(4096.0/maxi)) % 4096.0;
+	return [Math.floor(i/256)*16,Math.floor((i%256)/16)*16,(i%16)*16,255];
+}
+function onClickDrawButton() {
+	// https://en.wikipedia.org/wiki/Mandelbrot_set
+	xpos = parseFloat(document.getElementById("atx").value);
+	ypos = parseFloat(document.getElementById("aty").value);
+	zoomfactor = document.getElementById("zoom").value;
+	if (zoomfactor <= 0) zoomfactor = 1.0;
+	ctx = document.getElementById("gc").getContext("2d");
+	xlimit = document.getElementById("gc").width;
+	ylimit = document.getElementById("gc").height;
+	scale = 4.0/parseFloat(zoomfactor);
+	
+	pixels = ctx.createImageData(xlimit,ylimit);
+	pixeldatastream = pixels.data;
+	for (yctr=0.0;yctr<ylimit;yctr+=1.0) {
+		for (xctr=0.0;xctr<xlimit;xctr+=1.0) {
+			pixeldata = calculateMandelbrotPoint(xpos+(xctr*scale/xlimit),ypos+(yctr*scale/ylimit));
+			offset = ((yctr*xlimit)+xctr)*4;
+			for (datapoint=0;datapoint<4;datapoint++)
+				pixeldatastream[offset+datapoint] = pixeldata[datapoint];
+		}
+	}
+	ctx.putImageData(pixels,0,0);
+}
+function onTimerAnimate() {
+	var zoomIncrement = 1.5;
+	document.getElementById("zoom").value = zoomLevel; // global
+	onClickDrawButton();
+	zoomLevel = Math.floor(zoomIncrement*zoomLevel);
+	//if (zoomLevel > 1000000) clearInterval(animateTimer);
+}
+function onClickAnimateButton() {
+	// Pick a static location to zoom in at, then go there by zoomIncrement.
+	if (zoomLevel > 2) {
+		clearInterval(animateTimer);
+		zoomLevel = 2;
+		document.getElementById("animateButton").textContent = "Animate";
+		return;
+	}
+	var startx = 0.05;
+	var starty = -0.66;
+	zoomLevel = 2;
+	document.getElementById("atx").value = startx;
+	document.getElementById("aty").value = starty;
+	animateTimer = setInterval(onTimerAnimate,100);
+	document.getElementById("animateButton").textContent = "Stop";
+}
+</SCRIPT>
+<DIV><CANVAS id="gc" width="450" height="450" style="border: 5px solid black;"></DIV>
+<LABEL for="zoom">Zoom:</LABEL>
+<INPUT type="text" id="zoom" value="1430" />
+<LABEL for="atx">X position (-2.5..+1):</LABEL>
+<INPUT type="text" id="atx" value="0.05" />
+<LABEL for="aty">Y position (-2..+2):</LABEL>
+<INPUT type="text" id="aty" value="-0.66" />
+<BUTTON onClick="onClickDrawButton();">Draw</BUTTON>
+<BUTTON id="animateButton" onClick="onClickAnimateButton();">Animate</BUTTON>
+<BR />
+</BODY>
+</HTML>
